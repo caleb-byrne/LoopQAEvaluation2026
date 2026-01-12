@@ -1,0 +1,30 @@
+{
+  "name": "loopqaevaluation2026",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:chromium": "playwright test --project=chromium",
+    "test:headed": "playwright test --headed"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caleb-byrne/LoopQAEvaluation2026.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/caleb-byrne/LoopQAEvaluation2026/issues"
+  },
+  "homepage": "https://github.com/caleb-byrne/LoopQAEvaluation2026#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^25.0.6",
+    "typescript": "^5.9.3"
+  }
+}
