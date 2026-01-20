@@ -1,40 +1,65 @@
-import { Page } from '@playwright/test';
+import { Page, Locator } from '@playwright/test';
 
 export class DashboardPage {
     constructor(private page: Page) { }
 
     async navigateToProject(projectName: string) {
-        await this.page.getByRole('button', { name: new RegExp(projectName) }).click();
+        const projectButton = this.page.getByRole('button', { name: new RegExp(projectName) });
+        await projectButton.click({ timeout: 10000 });
         await this.page.waitForLoadState('load');
     }
 
+    /**
+     * Helper method to find the column container by column name
+     * Returns the container (generic div) that holds all tasks for this column
+     */
+    private async getColumnContainer(columnName: string): Promise<Locator | null> {
+        const columnHeading = this.page.getByRole('heading', { level: 2, name: new RegExp(columnName) });
+        const columnExists = await columnHeading.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (!columnExists) {
+            console.error(`Column "${columnName}" not found on the page`);
+            return null;
+        }
+
+        // The column container is a sibling generic element after the heading
+        return columnHeading.locator(`xpath=following-sibling::*[1]`);
+    }
+
+    /**
+     * Helper method to find a task card by task name within a column container
+     */
+    private async getTaskCardInContainer(columnContainer: Locator, taskName: string): Promise<Locator | null> {
+        // Find all h3 headings (task titles) in this column
+        const taskHeading = columnContainer.getByRole('heading', { level: 3, name: new RegExp(taskName) });
+        const taskExists = await taskHeading.isVisible({ timeout: 5000 }).catch(() => false);
+
+        if (!taskExists) {
+            console.error(`Task "${taskName}" not found in column`);
+            return null;
+        }
+
+        // The task card is the ancestor generic container of the h3
+        return taskHeading.locator(`xpath=ancestor::*[2]`);
+    }
+
     async verifyTaskTitleInColumn(taskName: string, columnName: string): Promise<boolean> {
-        // Find the column heading h2 with the column name
-        const columnHeading = this.page.locator(`//h2[contains(text(), '${columnName}')]`);
-        const columnExists = await columnHeading.isVisible().catch(() => false);
+        const columnContainer = await this.getColumnContainer(columnName);
+        if (!columnContainer) return false;
 
-        if (!columnExists) return false;
-
-        // Find the task h3 heading within this column's scope (looking for h3 after the h2)
-        const taskHeading = this.page.locator(`//h2[contains(text(), '${columnName}')]/ancestor::*//h3[contains(text(), '${taskName}')]`).first();
+        const taskHeading = columnContainer.getByRole('heading', { level: 3, name: new RegExp(taskName) });
         return await taskHeading.isVisible().catch(() => false);
     }
 
     async verifyTaskHasTag(taskName: string, columnName: string, tag: string): Promise<boolean> {
-        // Find the column heading h2 with the column name
-        const columnHeading = this.page.locator(`//h2[contains(text(), '${columnName}')]`);
-        const columnExists = await columnHeading.isVisible().catch(() => false);
+        const columnContainer = await this.getColumnContainer(columnName);
+        if (!columnContainer) return false;
 
-        if (!columnExists) return false;
+        const taskCard = await this.getTaskCardInContainer(columnContainer, taskName);
+        if (!taskCard) return false;
 
-        // Find the task h3 heading within this column's scope
-        const taskHeading = this.page.locator(`//h2[contains(text(), '${columnName}')]/ancestor::*//h3[contains(text(), '${taskName}')]`).first();
-        const taskExists = await taskHeading.isVisible().catch(() => false);
-
-        if (!taskExists) return false;
-
-        // Find the tag span within this task's scope (looking for span after the h3)
-        const tagElement = this.page.locator(`//h3[contains(text(), '${taskName}')]/ancestor::*//span[contains(text(), '${tag}')]`).first();
+        // Find the tag text within this specific task card
+        const tagElement = taskCard.getByText(new RegExp(`^${tag}$`));
         return await tagElement.isVisible().catch(() => false);
     }
 }
